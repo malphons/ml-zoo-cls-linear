@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ridge Classifier &mdash; ML Zoo</title>
+    <meta name="description" content="Interactive Ridge Classifier with L2-regularized decision boundary.">
+    <style>:root{--bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;--bg-card-hover:#272d36;--bg-input:#21262d;--text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;--text-link:#58a6ff;--border-default:#30363d;--border-muted:#21262d;--radius-sm:6px;--radius-md:10px;--transition:.2s ease}:root[data-theme="light"]{--bg-primary:#ffffff;--bg-secondary:#f6f8fa;--bg-card:#ffffff;--bg-card-hover:#f3f4f6;--bg-input:#f6f8fa;--text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;--text-link:#0969da;--border-default:#d0d7de;--border-muted:#d8dee4}*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--text-primary);background:var(--bg-primary);-webkit-font-smoothing:antialiased;line-height:1.6}</style>
+    <link rel="stylesheet" href="../../css/model.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="model-page">
+        <nav class="model-nav"><a href="../../../../" class="model-nav__back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back to ML Zoo</a></nav>
+        <section class="model-hero">
+            <h1 class="model-hero__title">Ridge Classifier</h1>
+            <div class="model-hero__meta">
+                <span class="model-hero__badge" style="background:#3fb950;color:#fff">Classification</span>
+                <span class="model-hero__badge" style="background:rgba(88,166,255,.15);color:#58a6ff">Linear</span>
+                <span class="model-hero__year">Est. 1970</span>
+            </div>
+            <p class="model-hero__desc">Treats classification as a regression problem with L2 penalty, assigning classes based on the sign of the prediction. Extremely fast due to the closed-form Ridge solution.</p>
+        </section>
+        <div class="model-diagram">
+            <div class="model-diagram__controls">
+                <button class="model-diagram__btn" id="btn-regions">Show Regions</button>
+                <button class="model-diagram__btn" onclick="MLZoo.diagram.resetZoom()">Reset View</button>
+            </div>
+            <div id="diagram-container"></div>
+        </div>
+        <div class="model-slider"><span class="model-slider__label">alpha:</span><input type="range" class="model-slider__input" min="0" max="4" step="1" value="2" id="alpha-input"><span class="model-slider__value" id="alpha-value">1</span></div>
+        <div class="model-tabs">
+            <button class="model-tab-btn model-tab-btn--active" data-tab="overview">Overview</button>
+            <button class="model-tab-btn" data-tab="howto">How It Works</button>
+            <button class="model-tab-btn" data-tab="math">Math</button>
+            <button class="model-tab-btn" data-tab="code">Code</button>
+            <button class="model-tab-btn" data-tab="references">References</button>
+        </div>
+        <div class="model-tab-content model-tab-content--active" id="tab-overview">
+            <div class="model-section">
+                <h2>Overview</h2>
+                <p>The Ridge Classifier converts classification into a regression problem. It encodes targets as -1/+1 (or one-hot for multiclass), solves the Ridge regression problem $(X^TX + \alpha I)^{-1}X^Ty$, and classifies based on the sign of the prediction. Because it uses a closed-form solution, it is much faster than iterative methods like Logistic Regression.</p>
+                <h3>When to Use</h3>
+                <ul><li>You need a very fast linear classifier</li><li>High-dimensional data (e.g. text classification with TF-IDF)</li><li>You don't need calibrated probabilities</li></ul>
+                <div class="model-proscons">
+                    <div class="model-pros"><h4>Pros</h4><ul><li>Closed-form solution &mdash; extremely fast</li><li>L2 regularization prevents overfitting</li><li>Works well in high dimensions</li><li>Scales to large datasets</li></ul></div>
+                    <div class="model-cons"><h4>Cons</h4><ul><li>No probability estimates (only hard predictions)</li><li>Linear decision boundary only</li><li>MSE loss not ideal for classification</li><li>Sensitive to alpha parameter</li></ul></div>
+                </div>
+            </div>
+        </div>
+        <div class="model-tab-content" id="tab-howto">
+            <div class="model-section">
+                <h2>How It Works</h2>
+                <ol style="color:var(--text-secondary);padding-left:20px;margin-bottom:16px">
+                    <li style="margin-bottom:8px">Encode class labels as $y \in \{-1, +1\}$ (binary) or one-hot vectors (multiclass).</li>
+                    <li style="margin-bottom:8px">Solve the Ridge regression problem: $\hat{w} = (X^TX + \alpha I)^{-1}X^Ty$.</li>
+                    <li style="margin-bottom:8px">Classify new point: $\hat{y} = \text{sign}(w \cdot x + b)$.</li>
+                </ol>
+                <p>Adjust the <strong>alpha</strong> slider to see how regularization affects the decision boundary. Higher alpha shrinks coefficients toward zero, potentially changing the boundary orientation.</p>
+            </div>
+        </div>
+        <div class="model-tab-content" id="tab-math">
+            <div class="model-section">
+                <h2>Key Equations</h2>
+                <div class="model-math"><div class="model-math__label">Ridge Solution</div><p>$$\hat{w} = (X^TX + \alpha I)^{-1}X^Ty$$</p></div>
+                <div class="model-math"><div class="model-math__label">Classification Rule</div><p>$$\hat{y}(x) = \text{sign}(\hat{w}^T x + \hat{b})$$</p></div>
+                <div class="model-math"><div class="model-math__label">Loss Function</div><p>$$\mathcal{L}(w) = \|y - Xw\|_2^2 + \alpha \|w\|_2^2$$</p><p>Unlike logistic regression (cross-entropy loss), Ridge Classifier minimizes squared error.</p></div>
+            </div>
+        </div>
+        <div class="model-tab-content" id="tab-code">
+            <div class="model-section">
+                <h2>scikit-learn</h2>
+                <div class="model-code"><div class="model-code__label">Python</div>
+                    <pre><code>from sklearn.linear_model import RidgeClassifier
+from sklearn.metrics import accuracy_score
+
+model = RidgeClassifier(alpha=1.0)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")</code></pre>
+                </div>
+            </div>
+        </div>
+        <div class="model-tab-content" id="tab-references">
+            <div class="model-section">
+                <h2>Key References</h2>
+                <ul><li>Hoerl, A. E. &amp; Kennard, R. W. (1970). Ridge Regression. <em>Technometrics</em>, 12(1), 55&ndash;67.</li></ul>
+                <h3>Related Models</h3>
+                <div class="model-related"><a href="../logistic/" class="model-related__link">Logistic Regression</a><a href="../perceptron/" class="model-related__link">Perceptron</a><a href="../lda/" class="model-related__link">LDA</a></div>
+            </div>
+        </div>
+    </div>
+    <script src="js/data.js"></script>
+    <script src="../../js/shared-diagram.js"></script>
+    <script>
+    (function () {
+        var t = localStorage.getItem('mlzoo_theme'); if (t) document.documentElement.setAttribute('data-theme', t);
+        document.querySelectorAll('.model-tab-btn').forEach(function (btn) { btn.addEventListener('click', function () { document.querySelectorAll('.model-tab-btn').forEach(function (b) { b.classList.remove('model-tab-btn--active'); }); document.querySelectorAll('.model-tab-content').forEach(function (c) { c.classList.remove('model-tab-content--active'); }); btn.classList.add('model-tab-btn--active'); document.getElementById('tab-' + btn.getAttribute('data-tab')).classList.add('model-tab-content--active'); }); });
+        document.addEventListener('DOMContentLoaded', function () { if (typeof renderMathInElement !== 'undefined') { renderMathInElement(document.body, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }] }); } });
+
+        var data = window.MLZoo.modelData;
+        MLZoo.diagram.init('#diagram-container', data.config);
+        var alphaValues = ['0.01', '0.1', '1', '10', '100'];
+        var currentAlpha = '1', showRegions = false;
+
+        function redraw() {
+            MLZoo.diagram.clear();
+            var cf = data.makeClassifyFn(parseFloat(currentAlpha));
+            if (showRegions) MLZoo.diagram.drawRegions(cf, { opacity: 0.12 });
+            var b = data.getBoundary(parseFloat(currentAlpha));
+            if (Math.abs(b.w2) > 1e-9) {
+                var g = MLZoo.diagram.getGroup(), s = MLZoo.diagram.getScales(), xd = data.config.xDomain;
+                g.selectAll('.boundary-line').remove();
+                g.append('line').attr('class', 'boundary-line')
+                    .attr('x1', s.x(xd[0])).attr('y1', s.y(-(b.w1 * xd[0] + b.w0) / b.w2))
+                    .attr('x2', s.x(xd[1])).attr('y2', s.y(-(b.w1 * xd[1] + b.w0) / b.w2))
+                    .attr('stroke', '#58a6ff').attr('stroke-width', 2).attr('opacity', 0.85);
+            }
+            MLZoo.diagram.drawPoints(data.points);
+        }
+        redraw();
+        document.getElementById('alpha-input').addEventListener('input', function () { var idx = parseInt(this.value); currentAlpha = alphaValues[idx]; document.getElementById('alpha-value').textContent = currentAlpha; redraw(); });
+        document.getElementById('btn-regions').addEventListener('click', function () { showRegions = !showRegions; this.textContent = showRegions ? 'Hide Regions' : 'Show Regions'; redraw(); });
+    })();
+    </script>
+</body>
+</html>

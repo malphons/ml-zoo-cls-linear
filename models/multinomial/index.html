@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multinomial Logistic Regression &mdash; ML Zoo</title>
+    <meta name="description" content="Interactive deep-dive into Multinomial Logistic Regression with 3-class softmax boundary visualization.">
+
+    <style>
+        :root {
+            --bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;
+            --bg-card-hover:#272d36;--bg-input:#21262d;
+            --text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;
+            --text-link:#58a6ff;--border-default:#30363d;--border-muted:#21262d;
+            --radius-sm:6px;--radius-md:10px;--transition:.2s ease;
+        }
+        :root[data-theme="light"] {
+            --bg-primary:#ffffff;--bg-secondary:#f6f8fa;--bg-card:#ffffff;
+            --bg-card-hover:#f3f4f6;--bg-input:#f6f8fa;
+            --text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;
+            --text-link:#0969da;--border-default:#d0d7de;--border-muted:#d8dee4;
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+             color:var(--text-primary);background:var(--bg-primary);-webkit-font-smoothing:antialiased;
+             line-height:1.6}
+    </style>
+    <link rel="stylesheet" href="../../css/model.css">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="model-page">
+
+        <!-- Navigation -->
+        <nav class="model-nav">
+            <a href="../../../../" class="model-nav__back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to ML Zoo
+            </a>
+        </nav>
+
+        <!-- Hero -->
+        <section class="model-hero">
+            <h1 class="model-hero__title">Multinomial Logistic Regression</h1>
+            <div class="model-hero__meta">
+                <span class="model-hero__badge" style="background:#3fb950;color:#fff">Classification</span>
+                <span class="model-hero__badge" style="background:rgba(88,166,255,.15);color:#58a6ff">Linear</span>
+                <span class="model-hero__year">Est. 1966</span>
+            </div>
+            <p class="model-hero__desc">
+                Extends logistic regression to multiple classes using the softmax function.
+                Each pair of classes is separated by a linear decision boundary, and the softmax
+                ensures probabilities across all classes sum to one.
+            </p>
+        </section>
+
+        <!-- Interactive Diagram -->
+        <div class="model-diagram">
+            <div class="model-diagram__controls">
+                <button class="model-diagram__btn" id="btn-regions">Show Regions</button>
+                <button class="model-diagram__btn" id="btn-boundaries">Show Boundaries</button>
+                <button class="model-diagram__btn" onclick="MLZoo.diagram.resetZoom()">Reset View</button>
+            </div>
+            <div id="diagram-container"></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="model-tabs">
+            <button class="model-tab-btn model-tab-btn--active" data-tab="overview">Overview</button>
+            <button class="model-tab-btn" data-tab="howto">How It Works</button>
+            <button class="model-tab-btn" data-tab="math">Math</button>
+            <button class="model-tab-btn" data-tab="code">Code</button>
+            <button class="model-tab-btn" data-tab="references">References</button>
+        </div>
+
+        <!-- Tab: Overview -->
+        <div class="model-tab-content model-tab-content--active" id="tab-overview">
+            <div class="model-section">
+                <h2>Overview</h2>
+                <p>
+                    Multinomial logistic regression (also called softmax regression) generalises binary
+                    logistic regression to handle problems with three or more classes. Instead of a
+                    single sigmoid function, it uses the softmax function to convert a vector of
+                    per-class linear scores into a probability distribution over all classes.
+                </p>
+                <p>
+                    The model learns a separate weight vector for each class. At prediction time, it
+                    computes a score for every class and assigns the input to the class with the
+                    highest probability. The decision boundaries between any two classes remain linear,
+                    but the overall partition of the feature space can form complex polygonal regions.
+                </p>
+
+                <h3>When to Use</h3>
+                <ul>
+                    <li>Multi-class classification where classes are mutually exclusive</li>
+                    <li>Choice modelling (e.g., which product a customer selects)</li>
+                    <li>Text classification with multiple categories</li>
+                    <li>When you need probability estimates across all classes</li>
+                </ul>
+
+                <div class="model-proscons">
+                    <div class="model-pros">
+                        <h4>Pros</h4>
+                        <ul>
+                            <li>Natural extension of logistic regression to multiple classes</li>
+                            <li>Produces calibrated probability estimates per class</li>
+                            <li>Convex optimisation &mdash; unique global solution</li>
+                            <li>Interpretable per-class coefficients</li>
+                            <li>Efficient with sparse, high-dimensional data</li>
+                        </ul>
+                    </div>
+                    <div class="model-cons">
+                        <h4>Cons</h4>
+                        <ul>
+                            <li>Assumes classes can be separated by linear boundaries</li>
+                            <li>Suffers from IIA (Independence of Irrelevant Alternatives) assumption</li>
+                            <li>Scales linearly with number of classes (K weight vectors)</li>
+                            <li>Requires feature engineering for nonlinear patterns</li>
+                            <li>Sensitive to class imbalance without adjustments</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: How It Works -->
+        <div class="model-tab-content" id="tab-howto">
+            <div class="model-section">
+                <h2>How It Works</h2>
+                <p>
+                    Multinomial logistic regression assigns a separate linear function (weight vector)
+                    to each of the $K$ classes. Training maximises the log-likelihood of the observed
+                    labels using gradient descent or a quasi-Newton method.
+                </p>
+
+                <h3>Step-by-Step</h3>
+                <ol style="color:var(--text-secondary);padding-left:20px;margin-bottom:16px">
+                    <li style="margin-bottom:8px">
+                        <strong>Compute per-class scores:</strong> For each class $k$, compute
+                        $z_k = \mathbf{w}_k^\top \mathbf{x} + b_k$.
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Apply softmax:</strong> Convert raw scores into probabilities:
+                        $P(y=k \mid \mathbf{x}) = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}}$.
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Predict the class:</strong> Assign $\hat{y} = \arg\max_k P(y=k \mid \mathbf{x})$.
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Compute the loss:</strong> Use the multi-class cross-entropy loss summed
+                        over all training examples and classes.
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Optimise:</strong> Update all weight vectors simultaneously using gradient
+                        descent. The gradient for class $k$ is the difference between the predicted
+                        probabilities and the one-hot encoded true labels, weighted by the features.
+                    </li>
+                </ol>
+
+                <h3>Decision Boundaries</h3>
+                <p>
+                    The boundary between any pair of classes $(i, j)$ is the set of points where
+                    $z_i = z_j$. Since both scores are linear in the features, this boundary is always
+                    a hyperplane. With $K$ classes, there are up to $\binom{K}{2}$ pairwise boundaries,
+                    though not all of them are visible (some may be dominated by a third class).
+                </p>
+
+                <h3>One-vs-Rest vs. Multinomial</h3>
+                <p>
+                    Scikit-learn offers two multi-class strategies: one-vs-rest (OvR) trains $K$ binary
+                    classifiers, while multinomial trains a single model with softmax over all classes.
+                    The multinomial approach is generally preferred because it optimises a single
+                    consistent objective and produces properly normalised probabilities.
+                </p>
+            </div>
+        </div>
+
+        <!-- Tab: Math -->
+        <div class="model-tab-content" id="tab-math">
+            <div class="model-section">
+                <h2>Key Equations</h2>
+
+                <div class="model-math">
+                    <div class="model-math__label">Softmax Function</div>
+                    <p>$$P(y = k \mid \mathbf{x}) = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}}, \quad z_k = \mathbf{w}_k^\top \mathbf{x} + b_k$$</p>
+                    <p>The softmax function normalises the $K$ linear scores into a proper probability
+                    distribution. It is the multi-class generalisation of the sigmoid.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Multi-Class Cross-Entropy Loss</div>
+                    <p>$$\mathcal{L} = -\frac{1}{N}\sum_{i=1}^{N} \sum_{k=1}^{K} \mathbb{1}[y_i=k] \log P(y_i=k \mid \mathbf{x}_i)$$</p>
+                    <p>This is the negative log-likelihood of the multinomial distribution. For each
+                    training example, only the true class contributes to the loss.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Gradient for Class k</div>
+                    <p>$$\frac{\partial \mathcal{L}}{\partial \mathbf{w}_k} = \frac{1}{N}\sum_{i=1}^{N} \left(P(y=k \mid \mathbf{x}_i) - \mathbb{1}[y_i=k]\right) \mathbf{x}_i$$</p>
+                    <p>The gradient pushes probabilities down for incorrect classes and up for the
+                    correct class. This elegant form makes optimisation straightforward.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Pairwise Decision Boundary</div>
+                    <p>$$(\mathbf{w}_i - \mathbf{w}_j)^\top \mathbf{x} + (b_i - b_j) = 0$$</p>
+                    <p>The boundary between classes $i$ and $j$ is a hyperplane defined by the difference
+                    of their weight vectors. This is always linear, regardless of the number of classes.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Code -->
+        <div class="model-tab-content" id="tab-code">
+            <div class="model-section">
+                <h2>scikit-learn</h2>
+                <div class="model-code">
+                    <div class="model-code__label">Python</div>
+                    <pre><code>from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Feature scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Fit multinomial logistic regression
+model = LogisticRegression(
+    multi_class='multinomial',   # softmax over all classes
+    solver='lbfgs',              # supports multinomial
+    C=1.0,
+    max_iter=300,
+    random_state=42
+)
+model.fit(X_train_scaled, y_train)
+
+# Predict classes and probabilities
+y_pred = model.predict(X_test_scaled)
+y_proba = model.predict_proba(X_test_scaled)
+
+# Evaluate
+print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+print(classification_report(y_test, y_pred))
+
+# Per-class coefficients
+for k, class_name in enumerate(model.classes_):
+    print(f"\nClass {class_name} weights:")
+    print(f"  Intercept: {model.intercept_[k]:.4f}")
+    for name, coef in zip(feature_names, model.coef_[k]):
+        print(f"  {name}: {coef:.4f}")</code></pre>
+                </div>
+
+                <h2>Visualise Multi-Class Regions</h2>
+                <div class="model-code">
+                    <div class="model-code__label">Python</div>
+                    <pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+xx, yy = np.meshgrid(
+    np.linspace(X[:, 0].min() - 1, X[:, 0].max() + 1, 200),
+    np.linspace(X[:, 1].min() - 1, X[:, 1].max() + 1, 200)
+)
+Z = model.predict(scaler.transform(
+    np.c_[xx.ravel(), yy.ravel()]
+)).reshape(xx.shape)
+
+plt.contourf(xx, yy, Z, alpha=0.3, cmap='Set2')
+scatter = plt.scatter(X[:, 0], X[:, 1], c=y, cmap='Set2',
+                      edgecolors='k', s=40)
+plt.legend(*scatter.legend_elements(), title="Class")
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.title('Multinomial Logistic Regression — Decision Regions')
+plt.show()</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: References -->
+        <div class="model-tab-content" id="tab-references">
+            <div class="model-section">
+                <h2>Key References</h2>
+                <ul>
+                    <li>Theil, H. (1969). A multinomial extension of the linear logit model. <em>International Economic Review</em>, 10(3), 251&ndash;259.</li>
+                    <li>McFadden, D. (1974). Conditional logit analysis of qualitative choice behavior. In <em>Frontiers in Econometrics</em>.</li>
+                    <li>Bishop, C. M. (2006). <em>Pattern Recognition and Machine Learning</em>, Chapter 4.3.4.</li>
+                    <li>Hastie, T., Tibshirani, R. &amp; Friedman, J. <em>The Elements of Statistical Learning</em>, Chapter 4.4.</li>
+                </ul>
+
+                <h3>Related Models</h3>
+                <div class="model-related">
+                    <a href="../logistic/" class="model-related__link">Logistic Regression</a>
+                    <a href="../lda/" class="model-related__link">LDA</a>
+                    <a href="../ridge-cls/" class="model-related__link">Ridge Classifier</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script src="../../js/shared-diagram.js"></script>
+
+    <script>
+    (function () {
+        /* ---------- Theme ---------- */
+        var t = localStorage.getItem('mlzoo_theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+
+        /* ---------- Tab switching ---------- */
+        document.querySelectorAll('.model-tab-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.model-tab-btn').forEach(function (b) {
+                    b.classList.remove('model-tab-btn--active');
+                });
+                document.querySelectorAll('.model-tab-content').forEach(function (c) {
+                    c.classList.remove('model-tab-content--active');
+                });
+                btn.classList.add('model-tab-btn--active');
+                var tab = document.getElementById('tab-' + btn.getAttribute('data-tab'));
+                if (tab) tab.classList.add('model-tab-content--active');
+            });
+        });
+
+        /* ---------- KaTeX auto-render ---------- */
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ]
+                });
+            }
+        });
+
+        /* ---------- Diagram init ---------- */
+        var data = window.MLZoo.modelData;
+        MLZoo.diagram.init('#diagram-container', data.config);
+        MLZoo.diagram.drawPoints(data.points);
+
+        var showRegions = false;
+        var showBoundaries = false;
+
+        function redraw() {
+            MLZoo.diagram.clear();
+            if (showRegions) {
+                MLZoo.diagram.drawRegions(data.classifyFn, { opacity: 0.12 });
+            }
+            if (showBoundaries) {
+                var segs = data.getBoundarySegments();
+                MLZoo.diagram.drawDecisionBoundary(segs, { color: '#e3b341' });
+            }
+            MLZoo.diagram.drawPoints(data.points);
+        }
+
+        /* ---------- Toggle Regions ---------- */
+        document.getElementById('btn-regions').addEventListener('click', function () {
+            showRegions = !showRegions;
+            this.textContent = showRegions ? 'Hide Regions' : 'Show Regions';
+            redraw();
+        });
+
+        /* ---------- Toggle Boundaries ---------- */
+        document.getElementById('btn-boundaries').addEventListener('click', function () {
+            showBoundaries = !showBoundaries;
+            this.textContent = showBoundaries ? 'Hide Boundaries' : 'Show Boundaries';
+            redraw();
+        });
+    })();
+    </script>
+</body>
+</html>

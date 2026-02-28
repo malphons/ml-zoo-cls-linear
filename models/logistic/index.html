@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistic Regression &mdash; ML Zoo</title>
+    <meta name="description" content="Interactive deep-dive into Logistic Regression with 2D decision boundary visualization.">
+
+    <style>
+        :root {
+            --bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;
+            --bg-card-hover:#272d36;--bg-input:#21262d;
+            --text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;
+            --text-link:#58a6ff;--border-default:#30363d;--border-muted:#21262d;
+            --radius-sm:6px;--radius-md:10px;--transition:.2s ease;
+        }
+        :root[data-theme="light"] {
+            --bg-primary:#ffffff;--bg-secondary:#f6f8fa;--bg-card:#ffffff;
+            --bg-card-hover:#f3f4f6;--bg-input:#f6f8fa;
+            --text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;
+            --text-link:#0969da;--border-default:#d0d7de;--border-muted:#d8dee4;
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+             color:var(--text-primary);background:var(--bg-primary);-webkit-font-smoothing:antialiased;
+             line-height:1.6}
+    </style>
+    <link rel="stylesheet" href="../../css/model.css">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="model-page">
+
+        <!-- Navigation -->
+        <nav class="model-nav">
+            <a href="../../../../" class="model-nav__back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to ML Zoo
+            </a>
+        </nav>
+
+        <!-- Hero -->
+        <section class="model-hero">
+            <h1 class="model-hero__title">Logistic Regression</h1>
+            <div class="model-hero__meta">
+                <span class="model-hero__badge" style="background:#3fb950;color:#fff">Classification</span>
+                <span class="model-hero__badge" style="background:rgba(88,166,255,.15);color:#58a6ff">Linear</span>
+                <span class="model-hero__year">Est. 1958</span>
+            </div>
+            <p class="model-hero__desc">
+                Models class probabilities using the logistic (sigmoid) function with maximum likelihood estimation.
+                Despite its name, logistic regression is a classification algorithm that produces a linear decision boundary.
+            </p>
+        </section>
+
+        <!-- Interactive Diagram -->
+        <div class="model-diagram">
+            <div class="model-diagram__controls">
+                <button class="model-diagram__btn" id="btn-regions">Show Regions</button>
+                <button class="model-diagram__btn" onclick="MLZoo.diagram.resetZoom()">Reset View</button>
+            </div>
+            <div id="diagram-container"></div>
+        </div>
+
+        <!-- Regularisation C slider -->
+        <div class="model-slider" id="slider-c">
+            <span class="model-slider__label">C (regularisation):</span>
+            <input type="range" class="model-slider__input" min="-2" max="2" step="0.1" value="1" id="c-input">
+            <span class="model-slider__value" id="c-value">10.00</span>
+        </div>
+
+        <!-- Tabs -->
+        <div class="model-tabs">
+            <button class="model-tab-btn model-tab-btn--active" data-tab="overview">Overview</button>
+            <button class="model-tab-btn" data-tab="howto">How It Works</button>
+            <button class="model-tab-btn" data-tab="math">Math</button>
+            <button class="model-tab-btn" data-tab="code">Code</button>
+            <button class="model-tab-btn" data-tab="references">References</button>
+        </div>
+
+        <!-- Tab: Overview -->
+        <div class="model-tab-content model-tab-content--active" id="tab-overview">
+            <div class="model-section">
+                <h2>Overview</h2>
+                <p>
+                    Logistic Regression is the go-to baseline for binary classification. It models the
+                    probability that an input belongs to the positive class by passing a linear combination
+                    of features through the logistic (sigmoid) function. Training maximises the likelihood
+                    of the observed labels, which is equivalent to minimising the binary cross-entropy loss.
+                </p>
+                <p>
+                    The model outputs calibrated probabilities, making it invaluable when you need to know
+                    <em>how confident</em> a prediction is, not just the predicted class. Regularisation
+                    (controlled by the parameter C) prevents overfitting by penalising large coefficients.
+                </p>
+
+                <h3>When to Use</h3>
+                <ul>
+                    <li>Binary classification tasks where you need probability estimates</li>
+                    <li>As a strong, interpretable baseline before trying more complex models</li>
+                    <li>When the relationship between log-odds and features is approximately linear</li>
+                    <li>High-dimensional sparse data (e.g., text classification with TF-IDF)</li>
+                </ul>
+
+                <div class="model-proscons">
+                    <div class="model-pros">
+                        <h4>Pros</h4>
+                        <ul>
+                            <li>Outputs well-calibrated probabilities</li>
+                            <li>Fast to train and predict</li>
+                            <li>Interpretable coefficients (log-odds)</li>
+                            <li>Works well in high dimensions with regularisation</li>
+                            <li>Convex loss &mdash; guaranteed global optimum</li>
+                        </ul>
+                    </div>
+                    <div class="model-cons">
+                        <h4>Cons</h4>
+                        <ul>
+                            <li>Limited to linear decision boundaries</li>
+                            <li>Cannot capture feature interactions without manual engineering</li>
+                            <li>Sensitive to outliers in unregularised form</li>
+                            <li>Assumes features are not highly correlated (multicollinearity)</li>
+                            <li>Requires feature scaling for optimal convergence</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: How It Works -->
+        <div class="model-tab-content" id="tab-howto">
+            <div class="model-section">
+                <h2>How It Works</h2>
+                <p>
+                    Logistic regression models the probability of the positive class by applying the
+                    sigmoid function to a linear combination of features. The model learns the weights
+                    by maximising the log-likelihood of the observed labels.
+                </p>
+
+                <h3>Step-by-Step</h3>
+                <ol style="color:var(--text-secondary);padding-left:20px;margin-bottom:16px">
+                    <li style="margin-bottom:8px">
+                        <strong>Compute the linear score:</strong> $z = w_0 + w_1 x_1 + w_2 x_2 + \dots + w_p x_p$
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Apply the sigmoid function:</strong> $\hat{p} = \sigma(z) = \frac{1}{1 + e^{-z}}$, which squashes the score into $[0, 1]$.
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Predict the class:</strong> If $\hat{p} \ge 0.5$, predict class 1; otherwise predict class 0.
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Compute the loss:</strong> Use binary cross-entropy (log loss) to measure how well the predicted probabilities match the true labels.
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Update weights:</strong> Use gradient descent (or a quasi-Newton method like L-BFGS) to adjust weights in the direction that reduces the loss.
+                    </li>
+                    <li style="margin-bottom:8px">
+                        <strong>Regularise:</strong> Add an L2 (or L1) penalty to the loss to shrink coefficients and prevent overfitting. The parameter $C = 1/\lambda$ controls the strength.
+                    </li>
+                </ol>
+
+                <h3>The Decision Boundary</h3>
+                <p>
+                    The decision boundary is the set of points where $\hat{p} = 0.5$, which occurs when
+                    $z = 0$. Since $z$ is a linear function of the features, the boundary is always a
+                    hyperplane (a line in 2D). The slider above lets you see how changing $C$ affects
+                    the steepness of the boundary.
+                </p>
+
+                <h3>Regularisation</h3>
+                <p>
+                    A small $C$ (strong regularisation) shrinks the coefficients toward zero, producing
+                    a less decisive boundary. A large $C$ (weak regularisation) allows the model to fit
+                    the training data more aggressively. In the interactive diagram, you can see this
+                    effect: low $C$ creates a gentler boundary, while high $C$ makes it steeper.
+                </p>
+            </div>
+        </div>
+
+        <!-- Tab: Math -->
+        <div class="model-tab-content" id="tab-math">
+            <div class="model-section">
+                <h2>Key Equations</h2>
+
+                <div class="model-math">
+                    <div class="model-math__label">Sigmoid Function</div>
+                    <p>$$\sigma(z) = \frac{1}{1 + e^{-z}}$$</p>
+                    <p>Maps any real number $z$ to the interval $(0, 1)$. The output represents the
+                    estimated probability $P(y=1 \mid \mathbf{x})$.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Log-Odds (Logit)</div>
+                    <p>$$\log \frac{P(y=1)}{P(y=0)} = \mathbf{w}^\top \mathbf{x} + w_0$$</p>
+                    <p>Logistic regression is a <em>linear model in log-odds space</em>. Each coefficient $w_j$
+                    represents the change in log-odds per unit increase in feature $x_j$.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Binary Cross-Entropy Loss</div>
+                    <p>$$\mathcal{L}(\mathbf{w}) = -\frac{1}{N}\sum_{i=1}^{N} \left[ y_i \log \hat{p}_i + (1-y_i)\log(1-\hat{p}_i) \right]$$</p>
+                    <p>Also known as log loss. This is the negative log-likelihood of the Bernoulli model.
+                    Minimising it yields the maximum likelihood estimate of the weights.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Gradient</div>
+                    <p>$$\frac{\partial \mathcal{L}}{\partial w_j} = \frac{1}{N}\sum_{i=1}^{N} (\hat{p}_i - y_i)\, x_{ij}$$</p>
+                    <p>The gradient has the elegant form of the residuals weighted by the features.
+                    This is used in gradient descent or passed to L-BFGS for optimisation.</p>
+                </div>
+
+                <div class="model-math">
+                    <div class="model-math__label">Regularised Objective</div>
+                    <p>$$\min_{\mathbf{w}} \; \mathcal{L}(\mathbf{w}) + \frac{1}{2C}\|\mathbf{w}\|_2^2$$</p>
+                    <p>$C$ is the inverse regularisation strength. Larger $C$ = less penalty = more
+                    complex boundary. Smaller $C$ = stronger penalty = simpler boundary.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Code -->
+        <div class="model-tab-content" id="tab-code">
+            <div class="model-section">
+                <h2>scikit-learn</h2>
+                <div class="model-code">
+                    <div class="model-code__label">Python</div>
+                    <pre><code>from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Feature scaling (important for logistic regression)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Fit model
+model = LogisticRegression(
+    C=1.0,              # inverse regularisation strength
+    penalty='l2',       # L2 penalty (default)
+    solver='lbfgs',     # quasi-Newton optimiser
+    max_iter=200,
+    random_state=42
+)
+model.fit(X_train_scaled, y_train)
+
+# Predict
+y_pred = model.predict(X_test_scaled)
+y_prob = model.predict_proba(X_test_scaled)[:, 1]
+
+# Evaluate
+print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+print(classification_report(y_test, y_pred))
+
+# Inspect coefficients
+print(f"Intercept: {model.intercept_[0]:.4f}")
+for name, coef in zip(feature_names, model.coef_[0]):
+    print(f"  {name}: {coef:.4f}")</code></pre>
+                </div>
+
+                <h2>Plot the Decision Boundary</h2>
+                <div class="model-code">
+                    <div class="model-code__label">Python</div>
+                    <pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+# Create mesh grid
+xx, yy = np.meshgrid(
+    np.linspace(X[:, 0].min() - 1, X[:, 0].max() + 1, 200),
+    np.linspace(X[:, 1].min() - 1, X[:, 1].max() + 1, 200)
+)
+Z = model.predict(scaler.transform(
+    np.c_[xx.ravel(), yy.ravel()]
+)).reshape(xx.shape)
+
+plt.contourf(xx, yy, Z, alpha=0.3, cmap='coolwarm')
+plt.scatter(X[:, 0], X[:, 1], c=y, cmap='coolwarm', edgecolors='k')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.title('Logistic Regression Decision Boundary')
+plt.show()</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: References -->
+        <div class="model-tab-content" id="tab-references">
+            <div class="model-section">
+                <h2>Key References</h2>
+                <ul>
+                    <li>Berkson, J. (1944). Application of the logistic function to bio-assay. <em>JASA</em>, 39(227), 357&ndash;365.</li>
+                    <li>Cox, D. R. (1958). The regression analysis of binary sequences. <em>JRSS-B</em>, 20(2), 215&ndash;242.</li>
+                    <li>Hosmer, D. W. &amp; Lemeshow, S. (2000). <em>Applied Logistic Regression</em>, 2nd ed. Wiley.</li>
+                    <li>Hastie, T., Tibshirani, R. &amp; Friedman, J. <em>The Elements of Statistical Learning</em>, Chapter 4.4.</li>
+                    <li>Bishop, C. M. (2006). <em>Pattern Recognition and Machine Learning</em>, Chapter 4.3.</li>
+                </ul>
+
+                <h3>Related Models</h3>
+                <div class="model-related">
+                    <a href="../multinomial/" class="model-related__link">Multinomial Logistic</a>
+                    <a href="../lda/" class="model-related__link">LDA</a>
+                    <a href="../perceptron/" class="model-related__link">Perceptron</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script src="../../js/shared-diagram.js"></script>
+
+    <script>
+    (function () {
+        /* ---------- Theme ---------- */
+        var t = localStorage.getItem('mlzoo_theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+
+        /* ---------- Tab switching ---------- */
+        document.querySelectorAll('.model-tab-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.model-tab-btn').forEach(function (b) {
+                    b.classList.remove('model-tab-btn--active');
+                });
+                document.querySelectorAll('.model-tab-content').forEach(function (c) {
+                    c.classList.remove('model-tab-content--active');
+                });
+                btn.classList.add('model-tab-btn--active');
+                var tab = document.getElementById('tab-' + btn.getAttribute('data-tab'));
+                if (tab) tab.classList.add('model-tab-content--active');
+            });
+        });
+
+        /* ---------- KaTeX auto-render ---------- */
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ]
+                });
+            }
+        });
+
+        /* ---------- Diagram init ---------- */
+        var data = window.MLZoo.modelData;
+        MLZoo.diagram.init('#diagram-container', data.config);
+        MLZoo.diagram.drawPoints(data.points);
+
+        var showRegions = false;
+        var currentC = 10;
+
+        function redraw() {
+            MLZoo.diagram.clear();
+            var boundary = data.getBoundary(currentC);
+            if (showRegions) {
+                MLZoo.diagram.drawRegions(data.makeClassifyFn(currentC), { opacity: 0.12 });
+            }
+            MLZoo.diagram.drawDecisionBoundary(boundary);
+            MLZoo.diagram.drawPoints(data.points);
+        }
+
+        redraw();
+
+        /* ---------- Toggle Regions ---------- */
+        document.getElementById('btn-regions').addEventListener('click', function () {
+            showRegions = !showRegions;
+            this.textContent = showRegions ? 'Hide Regions' : 'Show Regions';
+            redraw();
+        });
+
+        /* ---------- C slider (log scale) ---------- */
+        var cInput = document.getElementById('c-input');
+        var cValue = document.getElementById('c-value');
+
+        cInput.addEventListener('input', function () {
+            currentC = Math.pow(10, parseFloat(this.value));
+            cValue.textContent = currentC.toFixed(2);
+            redraw();
+        });
+    })();
+    </script>
+</body>
+</html>

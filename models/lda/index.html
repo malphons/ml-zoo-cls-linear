@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Discriminant Analysis &mdash; ML Zoo</title>
+    <meta name="description" content="Interactive deep-dive into LDA with Fisher's discriminant projection visualization.">
+    <style>
+        :root{--bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;--bg-card-hover:#272d36;--bg-input:#21262d;--text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;--text-link:#58a6ff;--border-default:#30363d;--border-muted:#21262d;--radius-sm:6px;--radius-md:10px;--transition:.2s ease}
+        :root[data-theme="light"]{--bg-primary:#ffffff;--bg-secondary:#f6f8fa;--bg-card:#ffffff;--bg-card-hover:#f3f4f6;--bg-input:#f6f8fa;--text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;--text-link:#0969da;--border-default:#d0d7de;--border-muted:#d8dee4}
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--text-primary);background:var(--bg-primary);-webkit-font-smoothing:antialiased;line-height:1.6}
+    </style>
+    <link rel="stylesheet" href="../../css/model.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="model-page">
+        <nav class="model-nav"><a href="../../../../" class="model-nav__back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back to ML Zoo</a></nav>
+        <section class="model-hero">
+            <h1 class="model-hero__title">Linear Discriminant Analysis</h1>
+            <div class="model-hero__meta">
+                <span class="model-hero__badge" style="background:#3fb950;color:#fff">Classification</span>
+                <span class="model-hero__badge" style="background:rgba(88,166,255,.15);color:#58a6ff">Linear</span>
+                <span class="model-hero__year">Est. 1936</span>
+            </div>
+            <p class="model-hero__desc">Projects data onto a lower-dimensional space that maximizes class separation, using Fisher's criterion to find the optimal discriminant direction.</p>
+        </section>
+        <div class="model-diagram">
+            <div class="model-diagram__controls">
+                <button class="model-diagram__btn" id="btn-regions">Show Regions</button>
+                <button class="model-diagram__btn" id="btn-projection">Show Projection</button>
+                <button class="model-diagram__btn" onclick="MLZoo.diagram.resetZoom()">Reset View</button>
+            </div>
+            <div id="diagram-container"></div>
+        </div>
+        <div class="model-tabs">
+            <button class="model-tab-btn model-tab-btn--active" data-tab="overview">Overview</button>
+            <button class="model-tab-btn" data-tab="howto">How It Works</button>
+            <button class="model-tab-btn" data-tab="math">Math</button>
+            <button class="model-tab-btn" data-tab="code">Code</button>
+            <button class="model-tab-btn" data-tab="references">References</button>
+        </div>
+        <div class="model-tab-content model-tab-content--active" id="tab-overview">
+            <div class="model-section">
+                <h2>Overview</h2>
+                <p>Linear Discriminant Analysis (LDA) is a generative classifier that models each class as a multivariate Gaussian with a shared covariance matrix. The decision boundary is linear because the shared covariance cancels out the quadratic terms. LDA also serves as a dimension reduction technique, projecting data onto the most discriminative directions.</p>
+                <h3>When to Use</h3>
+                <ul><li>Classes are roughly Gaussian with similar covariance</li><li>You need simultaneous classification and dimension reduction</li><li>Feature space is high-dimensional relative to samples</li><li>You want a fast, closed-form solution</li></ul>
+                <div class="model-proscons">
+                    <div class="model-pros"><h4>Pros</h4><ul><li>Closed-form solution &mdash; very fast</li><li>Simultaneous classification and dimension reduction</li><li>Optimal for Gaussian classes with equal covariance</li><li>More stable than logistic regression with small samples</li><li>Provides class probabilities</li></ul></div>
+                    <div class="model-cons"><h4>Cons</h4><ul><li>Assumes Gaussian class distributions</li><li>Requires shared covariance (use QDA otherwise)</li><li>Linear boundaries only</li><li>Sensitive to outliers (affects mean and covariance estimates)</li><li>At most K&minus;1 discriminant directions for K classes</li></ul></div>
+                </div>
+            </div>
+        </div>
+        <div class="model-tab-content" id="tab-howto">
+            <div class="model-section">
+                <h2>How It Works</h2>
+                <ol style="color:var(--text-secondary);padding-left:20px;margin-bottom:16px">
+                    <li style="margin-bottom:8px"><strong>Estimate class means</strong> $\mu_0, \mu_1$ and the pooled within-class scatter matrix $S_W$.</li>
+                    <li style="margin-bottom:8px"><strong>Compute Fisher's discriminant direction:</strong> $w = S_W^{-1}(\mu_1 - \mu_0)$. This direction maximizes the ratio of between-class to within-class variance.</li>
+                    <li style="margin-bottom:8px"><strong>Decision boundary:</strong> The hyperplane perpendicular to $w$ passing through the midpoint of the projected class means.</li>
+                    <li style="margin-bottom:8px"><strong>Classify:</strong> Project a new point onto $w$ and assign to the nearest class mean (or use Bayes rule with prior probabilities).</li>
+                </ol>
+                <p>Toggle "Show Projection" to see data projected onto the LDA discriminant axis. Notice how the two classes separate clearly along this direction.</p>
+            </div>
+        </div>
+        <div class="model-tab-content" id="tab-math">
+            <div class="model-section">
+                <h2>Key Equations</h2>
+                <div class="model-math"><div class="model-math__label">Fisher's Criterion</div><p>$$J(w) = \frac{w^T S_B w}{w^T S_W w}$$</p><p>where $S_B = (\mu_1 - \mu_0)(\mu_1 - \mu_0)^T$ is the between-class scatter and $S_W = \sum_{k} \sum_{x \in C_k} (x - \mu_k)(x - \mu_k)^T$ is the within-class scatter.</p></div>
+                <div class="model-math"><div class="model-math__label">Optimal Direction</div><p>$$w^* = S_W^{-1}(\mu_1 - \mu_0)$$</p></div>
+                <div class="model-math"><div class="model-math__label">Discriminant Function</div><p>$$\delta_k(x) = x^T \Sigma^{-1} \mu_k - \frac{1}{2}\mu_k^T \Sigma^{-1} \mu_k + \log \pi_k$$</p><p>Assign $x$ to class $k = \arg\max_k \delta_k(x)$.</p></div>
+            </div>
+        </div>
+        <div class="model-tab-content" id="tab-code">
+            <div class="model-section">
+                <h2>scikit-learn</h2>
+                <div class="model-code"><div class="model-code__label">Python</div>
+                    <pre><code>from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.metrics import accuracy_score
+
+model = LinearDiscriminantAnalysis()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+
+# Dimension reduction
+X_lda = model.transform(X)  # project to K-1 dimensions
+print(f"Explained variance ratio: {model.explained_variance_ratio_}")</code></pre>
+                </div>
+            </div>
+        </div>
+        <div class="model-tab-content" id="tab-references">
+            <div class="model-section">
+                <h2>Key References</h2>
+                <ul><li>Fisher, R. A. (1936). The Use of Multiple Measurements in Taxonomic Problems. <em>Annals of Eugenics</em>, 7(2), 179&ndash;188.</li><li>Hastie, T., Tibshirani, R. &amp; Friedman, J. <em>The Elements of Statistical Learning</em>, Chapter 4.3.</li></ul>
+                <h3>Related Models</h3>
+                <div class="model-related"><a href="../qda/" class="model-related__link">QDA</a><a href="../logistic/" class="model-related__link">Logistic Regression</a><a href="../multinomial/" class="model-related__link">Multinomial Logistic</a></div>
+            </div>
+        </div>
+    </div>
+    <script src="js/data.js"></script>
+    <script src="../../js/shared-diagram.js"></script>
+    <script>
+    (function () {
+        var t = localStorage.getItem('mlzoo_theme'); if (t) document.documentElement.setAttribute('data-theme', t);
+        document.querySelectorAll('.model-tab-btn').forEach(function (btn) { btn.addEventListener('click', function () { document.querySelectorAll('.model-tab-btn').forEach(function (b) { b.classList.remove('model-tab-btn--active'); }); document.querySelectorAll('.model-tab-content').forEach(function (c) { c.classList.remove('model-tab-content--active'); }); btn.classList.add('model-tab-btn--active'); document.getElementById('tab-' + btn.getAttribute('data-tab')).classList.add('model-tab-content--active'); }); });
+        document.addEventListener('DOMContentLoaded', function () { if (typeof renderMathInElement !== 'undefined') { renderMathInElement(document.body, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }] }); } });
+
+        var data = window.MLZoo.modelData;
+        MLZoo.diagram.init('#diagram-container', data.config);
+        MLZoo.diagram.drawPoints(data.points);
+
+        var showRegions = false, showProjection = false;
+        function redraw() {
+            MLZoo.diagram.clear();
+            if (showRegions) MLZoo.diagram.drawRegions(data.classifyFn, { opacity: 0.12 });
+            /* Draw decision boundary line */
+            var b = data.boundary, xd = data.config.xDomain, yd = data.config.yDomain;
+            var g = MLZoo.diagram.getGroup(), scales = MLZoo.diagram.getScales();
+            /* boundary: b.w1*x + b.w2*y + b.w0 = 0 => y = -(b.w1*x + b.w0)/b.w2 */
+            if (Math.abs(b.w2) > 1e-9) {
+                var x1 = xd[0], x2 = xd[1];
+                var y1 = -(b.w1 * x1 + b.w0) / b.w2;
+                var y2 = -(b.w1 * x2 + b.w0) / b.w2;
+                g.selectAll('.boundary-line').remove();
+                g.append('line').attr('class', 'boundary-line')
+                    .attr('x1', scales.x(x1)).attr('y1', scales.y(y1))
+                    .attr('x2', scales.x(x2)).attr('y2', scales.y(y2))
+                    .attr('stroke', '#d2a8ff').attr('stroke-width', 2).attr('opacity', 0.8);
+            }
+            if (showProjection) {
+                var w = data.projectionDirection;
+                var mid = { x: (data.mean0.x + data.mean1.x)/2, y: (data.mean0.y + data.mean1.y)/2 };
+                g.selectAll('.proj-line').remove();
+                g.append('line').attr('class', 'proj-line')
+                    .attr('x1', scales.x(mid.x - w.dx*8)).attr('y1', scales.y(mid.y - w.dy*8))
+                    .attr('x2', scales.x(mid.x + w.dx*8)).attr('y2', scales.y(mid.y + w.dy*8))
+                    .attr('stroke', '#f0883e').attr('stroke-width', 1.5).attr('stroke-dasharray', '6 3').attr('opacity', 0.7);
+            }
+            MLZoo.diagram.drawPoints(data.points);
+        }
+        redraw();
+        document.getElementById('btn-regions').addEventListener('click', function () { showRegions = !showRegions; this.textContent = showRegions ? 'Hide Regions' : 'Show Regions'; redraw(); });
+        document.getElementById('btn-projection').addEventListener('click', function () { showProjection = !showProjection; this.textContent = showProjection ? 'Hide Projection' : 'Show Projection'; redraw(); });
+    })();
+    </script>
+</body>
+</html>
